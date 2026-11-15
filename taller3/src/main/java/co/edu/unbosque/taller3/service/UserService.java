@@ -39,10 +39,35 @@ public class UserService implements CRUDOperation<UserDTO> {
 		if (findUsernameAlreadyTaken(data.getUsername())) {
 			return 1;
 		}
-		// la contraseña se guarda encriptada (BCrypt)
+
 		User entity = new User(data.getUsername(), passwordEncoder.encode(data.getPassword()));
 		userRepo.save(entity);
 		return 0;
+	}
+
+	public int createWithRole(UserDTO data) {
+		if (findUsernameAlreadyTaken(data.getUsername())) {
+			return 1;
+		}
+		User.Role role = parseRole(data.getRole());
+		if (role == null) {
+			return 2;
+		}
+		User entity = new User(data.getUsername(), passwordEncoder.encode(data.getPassword()));
+		entity.setRole(role);
+		userRepo.save(entity);
+		return 0;
+	}
+
+	private User.Role parseRole(String role) {
+		if (role == null || role.isBlank()) {
+			return User.Role.USER;
+		}
+		try {
+			return User.Role.valueOf(role.trim().toUpperCase());
+		} catch (IllegalArgumentException e) {
+			return null;
+		}
 	}
 
 	@Override
@@ -77,22 +102,33 @@ public class UserService implements CRUDOperation<UserDTO> {
 	@Override
 	public int updateById(Long id, UserDTO newData) {
 		Optional<User> found = userRepo.findById(id);
-		Optional<User> newFound = userRepo.findByUsername(newData.getUsername());
-
-		if (found.isPresent() && !newFound.isPresent()) {
-			User temp = found.get();
-			temp.setUsername(newData.getUsername());
-			temp.setPassword(passwordEncoder.encode(newData.getPassword()));
-			userRepo.save(temp);
-			return 0;
-		}
-		if (found.isPresent() && newFound.isPresent()) {
-			return 1; // username ya en uso
-		}
 		if (!found.isPresent()) {
 			return 2; // no existe
 		}
-		return 3;
+
+		User.Role newRole = null;
+		if (newData.getRole() != null && !newData.getRole().isBlank()) {
+			newRole = parseRole(newData.getRole());
+			if (newRole == null) {
+				return 3; // rol invalido
+			}
+		}
+
+		Optional<User> sameName = userRepo.findByUsername(newData.getUsername());
+		if (sameName.isPresent() && !sameName.get().getId().equals(id)) {
+			return 1; // username ya lo tiene otro usuario
+		}
+
+		User temp = found.get();
+		temp.setUsername(newData.getUsername());
+		if (newData.getPassword() != null && !newData.getPassword().isBlank()) {
+			temp.setPassword(passwordEncoder.encode(newData.getPassword()));
+		}
+		if (newRole != null) {
+			temp.setRole(newRole);
+		}
+		userRepo.save(temp);
+		return 0;
 	}
 
 	public UserDTO getById(Long id) {
@@ -119,12 +155,11 @@ public class UserService implements CRUDOperation<UserDTO> {
 		return 1; // credenciales invalidas
 	}
 
-	// Convierte User -> UserDTO a mano (sin ModelMapper).
-	// El password NO se devuelve: es el hash y no tiene por que salir.
 	private UserDTO toDTO(User entity) {
 		UserDTO dto = new UserDTO();
 		dto.setId(entity.getId());
 		dto.setUsername(entity.getUsername());
+		dto.setRole(entity.getRole().name());
 		return dto;
 	}
 }
