@@ -63,7 +63,6 @@ public class AuthController {
         }
     }
 
-    // Response class for JWT token
     private static class AuthResponse {
         private final String token;
 

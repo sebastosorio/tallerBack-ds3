@@ -10,6 +10,13 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import co.edu.unbosque.taller3.dto.PokemonChainLinkDTO;
+import co.edu.unbosque.taller3.dto.PokemonColorDTO;
+import co.edu.unbosque.taller3.dto.PokemonDTO;
+import co.edu.unbosque.taller3.dto.PokemonEspecieDTO;
+import co.edu.unbosque.taller3.dto.PokemonEvolucionDTO;
+import co.edu.unbosque.taller3.dto.PokemonGenerationDTO;
+import co.edu.unbosque.taller3.dto.SpeciesRefDTO;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -137,30 +144,154 @@ public class ExternalHTTPRequestHandler {
 		return pais;
 	}
 	
-	public static String enviarGet(String url) {
-        try {
-            HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(10))
-                    .build();
+	public static List<PokemonDTO> consultarListaPokemones(String url) {
+		HttpResponse<String> response = ejecutarGetPokemon(url);
+		if (response == null || response.statusCode() != 200) {
+			return null;
+		}
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .GET()
-                    .uri(URI.create(url))
-                    .header("Content-Type", "application/json")
-                    .build();
+		List<PokemonDTO> lista = new ArrayList<>();
+		try {
+			JsonObject root = JsonParser.parseString(response.body()).getAsJsonObject();
+			if (root.has("results") && root.get("results").isJsonArray()) {
+				for (JsonElement el : root.getAsJsonArray("results")) {
+					if (el.isJsonObject()) {
+						JsonObject obj = el.getAsJsonObject();
+						PokemonDTO poke = new PokemonDTO();
+						poke.setName(getString(obj, "name"));
+						lista.add(poke);
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return lista;
+	}
 
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+	public static PokemonDTO consultarPokemonUnico(String url) {
+		HttpResponse<String> response = ejecutarGetPokemon(url);
+		if (response == null || response.statusCode() != 200) {
+			return null;
+		}
 
-            if (response.statusCode() == 200) {
-                return response.body();
-            } else {
-                return "Error en la petición HTTP. Código: " + response.statusCode();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Excepción: " + e.getMessage();
-        }
-    }
+		try {
+			JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+			PokemonDTO pokemon = new PokemonDTO();
+			pokemon.setName(getString(json, "name"));
+			pokemon.setHeight(getInt(json, "height"));
+			pokemon.setWeight(getInt(json, "weight"));
+			return pokemon;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	public static PokemonEspecieDTO consultarEspeciePokemon(String url) {
+		HttpResponse<String> response = ejecutarGetPokemon(url);
+		if (response == null || response.statusCode() != 200) {
+			return null;
+		}
+
+		try {
+			JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+			PokemonEspecieDTO especie = new PokemonEspecieDTO();
+			especie.setName(getString(json, "name"));
+
+			if (json.has("color") && json.get("color").isJsonObject()) {
+				JsonObject colorObj = json.getAsJsonObject("color");
+				PokemonColorDTO color = new PokemonColorDTO();
+				color.setName(getString(colorObj, "name"));
+				color.setUrl(getString(colorObj, "url"));
+				especie.setColor(color);
+			}
+
+			if (json.has("generation") && json.get("generation").isJsonObject()) {
+				JsonObject genObj = json.getAsJsonObject("generation");
+				PokemonGenerationDTO generacion = new PokemonGenerationDTO();
+				generacion.setName(getString(genObj, "name"));
+				generacion.setUrl(getString(genObj, "url"));
+				especie.setGeneracion(generacion);
+			}
+
+			return especie;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	public static PokemonEvolucionDTO consultarEvolucionPokemon(String url) {
+		HttpResponse<String> response = ejecutarGetPokemon(url);
+		if (response == null || response.statusCode() != 200) {
+			return null;
+		}
+
+		try {
+			JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+			PokemonEvolucionDTO evolucion = new PokemonEvolucionDTO();
+
+			if (json.has("chain") && json.get("chain").isJsonObject()) {
+				evolucion.setChain(convertirAChainLink(json.getAsJsonObject("chain")));
+			}
+
+			return evolucion;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	private static PokemonChainLinkDTO convertirAChainLink(JsonObject json) {
+		PokemonChainLinkDTO link = new PokemonChainLinkDTO();
+
+		JsonElement isBabyEl = json.get("is_baby");
+		if (isBabyEl != null && isBabyEl.isJsonPrimitive()) {
+			link.setIs_baby(isBabyEl.getAsBoolean());
+		}
+
+		if (json.has("species") && json.get("species").isJsonObject()) {
+			JsonObject specObj = json.getAsJsonObject("species");
+			SpeciesRefDTO species = new SpeciesRefDTO();
+			species.setName(getString(specObj, "name"));
+			species.setUrl(getString(specObj, "url"));
+			link.setSpecies(species);
+		}
+
+		List<PokemonChainLinkDTO> evoluciones = new ArrayList<>();
+		if (json.has("evolves_to") && json.get("evolves_to").isJsonArray()) {
+			for (JsonElement item : json.getAsJsonArray("evolves_to")) {
+				if (item.isJsonObject()) {
+					evoluciones.add(convertirAChainLink(item.getAsJsonObject()));
+				}
+			}
+		}
+		link.setEvolves_to(evoluciones); 
+
+		return link;
+	}
+
+	private static HttpResponse<String> ejecutarGetPokemon(String url) {
+		HttpRequest request = HttpRequest.newBuilder()
+				.GET()
+				.uri(URI.create(url))
+				.header("Accept", "application/json")
+				.timeout(Duration.ofSeconds(15))
+				.build();
+
+		try {
+			return HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	
 
 	private static String codificar(String texto) {
 		return URLEncoder.encode(texto.trim(), StandardCharsets.UTF_8).replace("+", "%20");
@@ -179,6 +310,10 @@ public class ExternalHTTPRequestHandler {
 	private static double getDouble(JsonObject obj, String key) {
 		JsonElement el = obj.get(key);
 		return (el != null && el.isJsonPrimitive()) ? el.getAsDouble() : 0;
+	}
+	private static int getInt(JsonObject obj, String key) {
+		JsonElement el = obj.get(key);
+		return (el != null && el.isJsonPrimitive()) ? el.getAsInt() : 0;
 	}
 
 	private static List<String> getStringList(JsonObject obj, String key) {
