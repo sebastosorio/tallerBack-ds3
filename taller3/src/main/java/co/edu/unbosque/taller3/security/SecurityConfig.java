@@ -32,11 +32,13 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http.csrf(csrf -> csrf.disable())
-				.authorizeHttpRequests(auth -> auth
-						.requestMatchers("/auth/**").permitAll()
-						.requestMatchers("/", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-						.requestMatchers("/pais/**", "/pokemon/**").hasAnyRole("USER", "ADMIN")
-						.anyRequest().authenticated())
+		.authorizeHttpRequests(auth -> auth
+				.requestMatchers("/auth/**").permitAll()
+				.requestMatchers("/", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+				.requestMatchers("/pais/**", "/pokemon/**").hasAnyRole("USER", "ADMIN")
+				.requestMatchers("/user/getall", "/user/count", "/user/getbyid/**").hasAnyRole("USER", "ADMIN")
+				.requestMatchers("/user/**").hasRole("ADMIN")
+				.anyRequest().authenticated())
 				.exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authenticationProvider(authenticationProvider())
