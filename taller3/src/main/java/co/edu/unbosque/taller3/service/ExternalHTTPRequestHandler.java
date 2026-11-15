@@ -55,7 +55,6 @@ public class ExternalHTTPRequestHandler {
 			return null;
 		}
 
-		System.out.println("status code -> " + response.statusCode());
 
 		List<PaisDTO> lista = new ArrayList<>();
 		if (response.statusCode() == 404) {
@@ -137,6 +136,31 @@ public class ExternalHTTPRequestHandler {
 
 		return pais;
 	}
+	
+	public static String enviarGet(String url) {
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(10))
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .GET()
+                    .uri(URI.create(url))
+                    .header("Content-Type", "application/json")
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                return response.body();
+            } else {
+                return "Error en la petición HTTP. Código: " + response.statusCode();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Excepción: " + e.getMessage();
+        }
+    }
 
 	private static String codificar(String texto) {
 		return URLEncoder.encode(texto.trim(), StandardCharsets.UTF_8).replace("+", "%20");
