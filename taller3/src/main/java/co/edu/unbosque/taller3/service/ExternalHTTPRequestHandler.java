@@ -18,12 +18,16 @@ import co.edu.unbosque.taller3.dto.PokemonEvolucionDTO;
 import co.edu.unbosque.taller3.dto.PokemonGenerationDTO;
 import co.edu.unbosque.taller3.dto.SpeciesRefDTO;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import co.edu.unbosque.taller3.dto.ImagenDTO;
 import co.edu.unbosque.taller3.dto.PaisDTO;
+import co.edu.unbosque.taller3.dto.PixabayHitDTO;
+import co.edu.unbosque.taller3.dto.PixabayRespuestaDTO;
 
 public class ExternalHTTPRequestHandler {
 
@@ -309,16 +313,65 @@ public class ExternalHTTPRequestHandler {
 		return lista;
 	}
 	
-	public static HttpResponse<String> doGet(String url) throws IOException, InterruptedException {
-		HttpRequest request = HttpRequest.newBuilder().GET().uri(URI.create(url))
-				.header("Content-Type", "application/json").timeout(Duration.ofSeconds(15)).build();
-		return HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+	public static List<ImagenDTO> consultarImagenes(String url, int cantidad) {
+		HttpResponse<String> response = ejecutarGetImagen(url);
+		if (response == null || response.statusCode() != 200) {
+			return null;
+		}
+
+		try {
+			PixabayRespuestaDTO respuesta = new Gson().fromJson(response.body(), PixabayRespuestaDTO.class);
+			if (respuesta == null || respuesta.getHits() == null) {
+				return null;
+			}
+
+			List<ImagenDTO> lista = new ArrayList<>();
+			for (PixabayHitDTO hit : respuesta.getHits()) {
+				if (lista.size() >= cantidad) {
+					break;
+				}
+				ImagenDTO dto = new ImagenDTO();
+				dto.setId(hit.getId());
+				dto.setDescripcion(hit.getTags());
+				dto.setUrlImagen(hit.getWebformatURL());
+				dto.setUrlPagina(hit.getPageURL());
+				lista.add(dto);
+			}
+			return lista;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
 	}
 
-	public static HttpResponse<byte[]> doGetBytes(String url) throws IOException, InterruptedException {
+	public static byte[] descargarImagen(String url) {
 		HttpRequest request = HttpRequest.newBuilder().GET().uri(URI.create(url)).header("User-Agent", "Mozilla/5.0")
 				.timeout(Duration.ofSeconds(20)).build();
 
-		return HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofByteArray());
+		try {
+			HttpResponse<byte[]> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofByteArray());
+			if (response.statusCode() == 200) {
+				return response.body();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	private static HttpResponse<String> ejecutarGetImagen(String url) {
+		HttpRequest request = HttpRequest.newBuilder().GET().uri(URI.create(url)).header("Accept", "application/json")
+				.timeout(Duration.ofSeconds(15)).build();
+
+		try {
+			return HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 }
