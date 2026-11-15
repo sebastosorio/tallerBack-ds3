@@ -39,7 +39,6 @@ public class UserService implements CRUDOperation<UserDTO> {
 		if (findUsernameAlreadyTaken(data.getUsername())) {
 			return 1;
 		}
-		// la contraseña se guarda encriptada (BCrypt)
 		User entity = new User(data.getUsername(), passwordEncoder.encode(data.getPassword()));
 		userRepo.save(entity);
 		return 0;
@@ -87,10 +86,10 @@ public class UserService implements CRUDOperation<UserDTO> {
 			return 0;
 		}
 		if (found.isPresent() && newFound.isPresent()) {
-			return 1; // username ya en uso
+			return 1; 
 		}
 		if (!found.isPresent()) {
-			return 2; // no existe
+			return 2; 
 		}
 		return 3;
 	}
@@ -113,14 +112,12 @@ public class UserService implements CRUDOperation<UserDTO> {
 		if (userOpt.isPresent()) {
 			User user = userOpt.get();
 			if (passwordEncoder.matches(password, user.getPassword())) {
-				return 0; // correcto
+				return 0; 
 			}
 		}
-		return 1; // credenciales invalidas
+		return 1; 
 	}
 
-	// Convierte User -> UserDTO a mano (sin ModelMapper).
-	// El password NO se devuelve: es el hash y no tiene por que salir.
 	private UserDTO toDTO(User entity) {
 		UserDTO dto = new UserDTO();
 		dto.setId(entity.getId());

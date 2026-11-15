@@ -169,4 +169,17 @@ public class ExternalHTTPRequestHandler {
 		}
 		return lista;
 	}
+	
+	public static HttpResponse<String> doGet(String url) throws IOException, InterruptedException {
+		HttpRequest request = HttpRequest.newBuilder().GET().uri(URI.create(url))
+				.header("Content-Type", "application/json").timeout(Duration.ofSeconds(15)).build();
+		return HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+	}
+
+	public static HttpResponse<byte[]> doGetBytes(String url) throws IOException, InterruptedException {
+		HttpRequest request = HttpRequest.newBuilder().GET().uri(URI.create(url)).header("User-Agent", "Mozilla/5.0")
+				.timeout(Duration.ofSeconds(20)).build();
+
+		return HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofByteArray());
+	}
 }

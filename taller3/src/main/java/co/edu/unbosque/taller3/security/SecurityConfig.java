@@ -36,6 +36,7 @@ public class SecurityConfig {
 						.requestMatchers("/auth/**").permitAll()
 						.requestMatchers("/", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
 						.requestMatchers("/pais/**").hasAnyRole("USER", "ADMIN")
+						.requestMatchers("/imagen/**").hasAnyRole("USER", "ADMIN") 
 						.anyRequest().authenticated())
 				.exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

@@ -19,7 +19,7 @@ import co.edu.unbosque.taller3.service.UserService;
 
 @RestController
 @RequestMapping("/auth")
-@Tag(name = "Autenticacion", description = "Espacio de JWT (recibir el token)")
+@Tag(name = "Autenticacion", description = "Espacio de JWT")
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
@@ -49,7 +49,6 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody UserDTO registerRequest) {
-        // Check if username already exists
         if (userService.findUsernameAlreadyTaken(registerRequest.getUsername())) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Username already exists");
         }
@@ -63,7 +62,6 @@ public class AuthController {
         }
     }
 
-    // Response class for JWT token
     private static class AuthResponse {
         private final String token;
 
