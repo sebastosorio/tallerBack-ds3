@@ -1,7 +1,5 @@
 package co.edu.unbosque.taller3.controller;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,9 +10,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import co.edu.unbosque.taller3.dto.PokemonDTO;
-import co.edu.unbosque.taller3.dto.PokemonEspecieDTO;
-import co.edu.unbosque.taller3.dto.PokemonEvolucionDTO;
+import co.edu.unbosque.taller3.exception.PokemonApiException;
+import co.edu.unbosque.taller3.exception.PokemonNotFoundException;
 import co.edu.unbosque.taller3.service.PokemonService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -34,18 +31,18 @@ public class PokemonController {
 	}
 
 	@GetMapping("/catalogoPokemon")
-	public ResponseEntity<?> listarPorLimite(@Parameter(description = "Cantidad máxima de pokemones a mostrar en la lista")@RequestParam(defaultValue = "20") int numeroPokemones) {
+	public ResponseEntity<?> listarPorLimite(
+			@Parameter(description = "Cantidad máxima de pokemones a mostrar en la lista") @RequestParam(defaultValue = "20") int numeroPokemones) {
 		if (numeroPokemones <= 0) {
 			return new ResponseEntity<>("El limite debe ser mayor a 0", HttpStatus.BAD_REQUEST);
 		}
-		List<PokemonDTO> lista = pokemonServ.consultarPokemonesPorLimite(numeroPokemones);
-		if (lista == null) {
-			return new ResponseEntity<>("No se pudo consultar la API externa de pokemones", HttpStatus.BAD_GATEWAY);
+		try {
+			return new ResponseEntity<>(pokemonServ.consultarPokemonesPorLimite(numeroPokemones), HttpStatus.OK);
+		} catch (PokemonNotFoundException e) {
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+		} catch (PokemonApiException e) {
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_GATEWAY);
 		}
-		if (lista.isEmpty()) {
-			return new ResponseEntity<>("No se encontraron pokemones", HttpStatus.NOT_FOUND);
-		}
-		return new ResponseEntity<>(lista, HttpStatus.OK);
 	}
 
 	@GetMapping("/caracteristicasGenerales")
@@ -53,8 +50,14 @@ public class PokemonController {
 		if (nombre == null || nombre.isBlank()) {
 			return new ResponseEntity<>("Debes escribir el nombre de un pokemon", HttpStatus.BAD_REQUEST);
 		}
-		PokemonDTO pokemon = pokemonServ.consultarPokemonPorNombre(nombre);
-		return armarRespuestaObjeto(pokemon, "No se encontro ningun pokemon con ese nombre (ej: pikachu)");
+		try {
+			return new ResponseEntity<>(pokemonServ.consultarPokemonPorNombre(nombre), HttpStatus.OK);
+		} catch (PokemonNotFoundException e) {
+			return new ResponseEntity<>("No se encontro ningun pokemon con ese nombre (ej: pikachu)",
+					HttpStatus.NOT_FOUND);
+		} catch (PokemonApiException e) {
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_GATEWAY);
+		}
 	}
 
 	@GetMapping("/caracteristicasEspecificas/{nombre}")
@@ -62,24 +65,28 @@ public class PokemonController {
 		if (nombre == null || nombre.isBlank()) {
 			return new ResponseEntity<>("Debes escribir el nombre o especie del pokemon", HttpStatus.BAD_REQUEST);
 		}
-		PokemonEspecieDTO especie = pokemonServ.consultarEspeciePokemon(nombre);
-		return armarRespuestaObjeto(especie, "No se encontro ninguna especie con ese nombre");
+		try {
+			return new ResponseEntity<>(pokemonServ.consultarEspeciePokemon(nombre), HttpStatus.OK);
+		} catch (PokemonNotFoundException e) {
+			return new ResponseEntity<>("No se encontro ninguna especie con ese nombre", HttpStatus.NOT_FOUND);
+		} catch (PokemonApiException e) {
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_GATEWAY);
+		}
 	}
 
 	@GetMapping("/evolucion/{idCadenaEvolutiva}")
 	public ResponseEntity<?> buscarEvolucion(@PathVariable int idCadenaEvolutiva) {
 		if (idCadenaEvolutiva <= 0) {
-			return new ResponseEntity<>("El ID de evolución debe ser mayor a 0 y esta relacionado al ID de la cadena de evolucion del pokemon", HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<>(
+					"El ID de evolución debe ser mayor a 0 y esta relacionado al ID de la cadena de evolucion del pokemon",
+					HttpStatus.BAD_REQUEST);
 		}
-		PokemonEvolucionDTO evolucion = pokemonServ.consultarEvolucionPokemon(idCadenaEvolutiva);
-		return armarRespuestaObjeto(evolucion, "No se encontro ninguna cadena de evolucion con ese ID");
-	}
-
-	private ResponseEntity<?> armarRespuestaObjeto(Object resultado, String mensajeNoEncontrado) {
-		if (resultado == null) {
-			return new ResponseEntity<>(mensajeNoEncontrado + " (o fallo la conexion con la API externa)",
-					HttpStatus.NOT_FOUND);
+		try {
+			return new ResponseEntity<>(pokemonServ.consultarEvolucionPokemon(idCadenaEvolutiva), HttpStatus.OK);
+		} catch (PokemonNotFoundException e) {
+			return new ResponseEntity<>("No se encontro ninguna cadena de evolucion con ese ID", HttpStatus.NOT_FOUND);
+		} catch (PokemonApiException e) {
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_GATEWAY);
 		}
-		return new ResponseEntity<>(resultado, HttpStatus.OK);
 	}
 }
