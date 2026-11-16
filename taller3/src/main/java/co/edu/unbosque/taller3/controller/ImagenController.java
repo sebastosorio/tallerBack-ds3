@@ -1,7 +1,5 @@
 package co.edu.unbosque.taller3.controller;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -11,8 +9,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import co.edu.unbosque.taller3.dto.ImagenDTO;
+import co.edu.unbosque.taller3.exception.ImagenApiException;
+import co.edu.unbosque.taller3.exception.ImagenNotFoundException;
 import co.edu.unbosque.taller3.service.ImagenService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -38,7 +36,13 @@ public class ImagenController {
 		if (cantidad < 1 || cantidad > 20) {
 			return new ResponseEntity<>("La cantidad debe estar entre 1 y 20", HttpStatus.BAD_REQUEST);
 		}
-		return armarRespuesta(imagenServ.buscar(query.trim(), cantidad), "No se encontraron imagenes para: " + query);
+		try {
+			return new ResponseEntity<>(imagenServ.buscar(query.trim(), cantidad), HttpStatus.OK);
+		} catch (ImagenNotFoundException e) {
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+		} catch (ImagenApiException e) {
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_GATEWAY);
+		}
 	}
 
 	@GetMapping(path = "/ver", produces = MediaType.IMAGE_JPEG_VALUE)
@@ -46,25 +50,12 @@ public class ImagenController {
 		if (query == null || query.isBlank() || posicion < 0 || posicion > 19) {
 			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
 		}
-
-		byte[] imagen = imagenServ.obtenerImagen(query.trim(), posicion);
-
-		if (imagen == null) {
+		try {
+			return new ResponseEntity<>(imagenServ.obtenerImagen(query.trim(), posicion), HttpStatus.OK);
+		} catch (ImagenNotFoundException e) {
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		} catch (ImagenApiException e) {
 			return new ResponseEntity<>(HttpStatus.BAD_GATEWAY);
 		}
-		if (imagen.length == 0) {
-			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-		}
-		return new ResponseEntity<>(imagen, HttpStatus.OK);
-	}
-
-	private ResponseEntity<?> armarRespuesta(List<ImagenDTO> imagenes, String mensajeNoEncontrado) {
-		if (imagenes == null) {
-			return new ResponseEntity<>("No se pudo consultar la API externa de imagenes", HttpStatus.BAD_GATEWAY);
-		}
-		if (imagenes.isEmpty()) {
-			return new ResponseEntity<>(mensajeNoEncontrado, HttpStatus.NOT_FOUND);
-		}
-		return new ResponseEntity<>(imagenes, HttpStatus.OK);
 	}
 }
