@@ -4,16 +4,16 @@ public class SpeciesRefDTO {
 
 	
 	private String name;
-	private String url;
+	private int numeroPokedex;
 	
 	public SpeciesRefDTO() {
 		// TODO Auto-generated constructor stub
 	}
 
-	public SpeciesRefDTO(String name, String url) {
+	public SpeciesRefDTO(String name, int numeroPokedex) {
 		super();
 		this.name = name;
-		this.url = url;
+		this.numeroPokedex = numeroPokedex;
 	}
 
 	public String getName() {
@@ -24,18 +24,20 @@ public class SpeciesRefDTO {
 		this.name = name;
 	}
 
-	public String getUrl() {
-		return url;
+	public int getNumeroPokedex() {
+		return numeroPokedex;
 	}
 
-	public void setUrl(String url) {
-		this.url = url;
+	public void setNumeroPokedex(int numeroPokedex) {
+		this.numeroPokedex = numeroPokedex;
 	}
 
 	@Override
 	public String toString() {
-		return "SpeciesRefDTO [name=" + name + ", url=" + url + "]";
+		return "SpeciesRefDTO [name=" + name + ", numeroPokedex=" + numeroPokedex + "]";
 	}
+
+	
 	
 	
 }

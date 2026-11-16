@@ -6,16 +6,21 @@ public class PokemonEspecieDTO {
 	private String name;
 	private PokemonColorDTO color;
 	private PokemonGenerationDTO generacion;
+	private int idCadenaEvolutiva;
+	private String region;
 	
 	public PokemonEspecieDTO() {
 		// TODO Auto-generated constructor stub
 	}
 
-	public PokemonEspecieDTO(String name, PokemonColorDTO color, PokemonGenerationDTO generacion) {
+	public PokemonEspecieDTO(String name, PokemonColorDTO color, PokemonGenerationDTO generacion, int idCadenaEvolutiva,
+			String region) {
 		super();
 		this.name = name;
 		this.color = color;
 		this.generacion = generacion;
+		this.idCadenaEvolutiva = idCadenaEvolutiva;
+		this.region = region;
 	}
 
 	public String getName() {
@@ -42,10 +47,29 @@ public class PokemonEspecieDTO {
 		this.generacion = generacion;
 	}
 
+	public int getIdCadenaEvolutiva() {
+		return idCadenaEvolutiva;
+	}
+
+	public void setIdCadenaEvolutiva(int idCadenaEvolutiva) {
+		this.idCadenaEvolutiva = idCadenaEvolutiva;
+	}
+
+	public String getRegion() {
+		return region;
+	}
+
+	public void setRegion(String region) {
+		this.region = region;
+	}
+
 	@Override
 	public String toString() {
-		return "PokemonEspecieDTO [name=" + name + ", color=" + color + ", generacion=" + generacion + "]";
+		return "PokemonEspecieDTO [name=" + name + ", color=" + color + ", generacion=" + generacion
+				+ ", idCadenaEvolutiva=" + idCadenaEvolutiva + ", region=" + region + "]";
 	}
+
+	
 	
 	
 	

@@ -4,16 +4,14 @@ public class PokemonColorDTO {
 
 	
 	private String name;
-	private String url;
 	
 	public PokemonColorDTO() {
 		// TODO Auto-generated constructor stub
 	}
 
-	public PokemonColorDTO(String name, String url) {
+	public PokemonColorDTO(String name) {
 		super();
 		this.name = name;
-		this.url = url;
 	}
 
 	public String getName() {
@@ -24,17 +22,10 @@ public class PokemonColorDTO {
 		this.name = name;
 	}
 
-	public String getUrl() {
-		return url;
-	}
-
-	public void setUrl(String url) {
-		this.url = url;
-	}
 
 	@Override
 	public String toString() {
-		return "PokemonColorDTO [name=" + name + ", url=" + url + "]";
+		return "PokemonColorDTO [name=" + name + "]";
 	}
 	
 }
