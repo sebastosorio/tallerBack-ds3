@@ -4,16 +4,14 @@ public class PokemonTipoDTO {
 
 	
 	private String name;
-	private String url;
 	
 	public PokemonTipoDTO() {
 		// TODO Auto-generated constructor stub
 	}
 
-	public PokemonTipoDTO(String name, String url) {
+	public PokemonTipoDTO(String name) {
 		super();
 		this.name = name;
-		this.url = url;
 	}
 
 	public String getName() {
@@ -24,17 +22,11 @@ public class PokemonTipoDTO {
 		this.name = name;
 	}
 
-	public String getUrl() {
-		return url;
-	}
-
-	public void setUrl(String url) {
-		this.url = url;
-	}
+	
 
 	@Override
 	public String toString() {
-		return "PokemonTipoDTO [name=" + name + ", url=" + url + "]";
+		return "PokemonTipoDTO [name=" + name +"]";
 	}
 	
 }

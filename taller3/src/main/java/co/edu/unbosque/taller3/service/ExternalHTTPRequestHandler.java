@@ -142,9 +142,10 @@ public class ExternalHTTPRequestHandler {
 				for (JsonElement el : root.getAsJsonArray("results")) {
 					if (el.isJsonObject()) {
 						JsonObject obj = el.getAsJsonObject();
-						PokemonDTO poke = new PokemonDTO();
-						poke.setName(getString(obj, "name"));
-						lista.add(poke);
+						PokemonDTO poke = consultarPokemonUnico(getString(obj, "url"));
+						if (poke != null) {
+							lista.add(poke);
+						}
 					}
 				}
 			}
@@ -166,6 +167,19 @@ public class ExternalHTTPRequestHandler {
 			pokemon.setName(getString(json, "name"));
 			pokemon.setHeight(getInt(json, "height"));
 			pokemon.setWeight(getInt(json, "weight"));
+			
+			List<String> listaTipos = new ArrayList<>();
+			if (json.has("types") && json.get("types").isJsonArray()) {
+				for (JsonElement item : json.getAsJsonArray("types")) {
+					if (item.isJsonObject()) {
+						JsonObject typeObj = item.getAsJsonObject().getAsJsonObject("type");
+						if (typeObj != null) {
+							listaTipos.add(getString(typeObj, "name"));
+						}
+					}
+				}
+			}
+			pokemon.setTipo(String.join(", ", listaTipos));
 			return pokemon;
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -188,7 +202,6 @@ public class ExternalHTTPRequestHandler {
 				JsonObject colorObj = json.getAsJsonObject("color");
 				PokemonColorDTO color = new PokemonColorDTO();
 				color.setName(getString(colorObj, "name"));
-				color.setUrl(getString(colorObj, "url"));
 				especie.setColor(color);
 			}
 
@@ -196,8 +209,22 @@ public class ExternalHTTPRequestHandler {
 				JsonObject genObj = json.getAsJsonObject("generation");
 				PokemonGenerationDTO generacion = new PokemonGenerationDTO();
 				generacion.setName(getString(genObj, "name"));
-				generacion.setUrl(getString(genObj, "url"));
 				especie.setGeneracion(generacion);
+
+				HttpResponse<String> respuestaGen = ejecutarGetPokemon(getString(genObj, "url"));
+				if (respuestaGen != null && respuestaGen.statusCode() == 200) {
+					JsonObject genJson = JsonParser.parseString(respuestaGen.body()).getAsJsonObject();
+					if (genJson.has("main_region") && genJson.get("main_region").isJsonObject()) {
+						especie.setRegion(getString(genJson.getAsJsonObject("main_region"), "name"));
+					}
+				}
+			}
+			
+			if (json.has("evolution_chain") && json.get("evolution_chain").isJsonObject()) {
+				String urlCadena = getString(json.getAsJsonObject("evolution_chain"), "url");
+				String sinUltimaBarra = urlCadena.substring(0, urlCadena.length() - 1);
+				String numero = sinUltimaBarra.substring(sinUltimaBarra.lastIndexOf("/") + 1);
+				especie.setIdCadenaEvolutiva(Integer.parseInt(numero));
 			}
 
 			return especie;
@@ -240,7 +267,12 @@ public class ExternalHTTPRequestHandler {
 			JsonObject specObj = json.getAsJsonObject("species");
 			SpeciesRefDTO species = new SpeciesRefDTO();
 			species.setName(getString(specObj, "name"));
-			species.setUrl(getString(specObj, "url"));
+
+			String urlEspecie = getString(specObj, "url");
+			String sinUltimaBarra = urlEspecie.substring(0, urlEspecie.length() - 1);
+			String numero = sinUltimaBarra.substring(sinUltimaBarra.lastIndexOf("/") + 1);
+			species.setNumeroPokedex(Integer.parseInt(numero));
+
 			link.setSpecies(species);
 		}
 
