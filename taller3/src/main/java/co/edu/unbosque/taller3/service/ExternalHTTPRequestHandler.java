@@ -10,6 +10,15 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import co.edu.unbosque.taller3.dto.ImagenDTO;
+import co.edu.unbosque.taller3.dto.PaisDTO;
+import co.edu.unbosque.taller3.dto.PixabayHitDTO;
+import co.edu.unbosque.taller3.dto.PixabayRespuestaDTO;
 import co.edu.unbosque.taller3.dto.PokemonChainLinkDTO;
 import co.edu.unbosque.taller3.dto.PokemonColorDTO;
 import co.edu.unbosque.taller3.dto.PokemonDTO;
@@ -17,24 +26,17 @@ import co.edu.unbosque.taller3.dto.PokemonEspecieDTO;
 import co.edu.unbosque.taller3.dto.PokemonEvolucionDTO;
 import co.edu.unbosque.taller3.dto.PokemonGenerationDTO;
 import co.edu.unbosque.taller3.dto.SpeciesRefDTO;
-
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-
-import co.edu.unbosque.taller3.dto.ImagenDTO;
-import co.edu.unbosque.taller3.dto.PaisDTO;
-import co.edu.unbosque.taller3.dto.PixabayHitDTO;
-import co.edu.unbosque.taller3.dto.PixabayRespuestaDTO;
+import co.edu.unbosque.taller3.exception.ImagenApiException;
+import co.edu.unbosque.taller3.exception.PaisApiException;
+import co.edu.unbosque.taller3.exception.PokemonApiException;
+import co.edu.unbosque.taller3.exception.PokemonNotFoundException;
 
 public class ExternalHTTPRequestHandler {
 
 	private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder().version(HttpClient.Version.HTTP_2)
 			.followRedirects(HttpClient.Redirect.NORMAL).connectTimeout(Duration.ofSeconds(10)).build();
 
-	public static List<PaisDTO> doGetAndConvertToPaisList(String url) {
+	public static List<PaisDTO> doGetAndConvertToPaisList(String url) throws PaisApiException {
 		HttpRequest request = HttpRequest.newBuilder().GET().uri(URI.create(url)).header("Accept", "application/json")
 				.timeout(Duration.ofSeconds(15)).build();
 
@@ -44,12 +46,11 @@ public class ExternalHTTPRequestHandler {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
 			e.printStackTrace();
 		}
 
 		if (response == null) {
-			return null;
+			throw new PaisApiException();
 		}
 
 		List<PaisDTO> lista = new ArrayList<>();
@@ -57,7 +58,7 @@ public class ExternalHTTPRequestHandler {
 			return lista;
 		}
 		if (response.statusCode() != 200) {
-			return null;
+			throw new PaisApiException();
 		}
 
 		try {
@@ -74,7 +75,7 @@ public class ExternalHTTPRequestHandler {
 		} catch (Exception e) {
 			System.out.println("Respuesta inesperada: " + response.body());
 			e.printStackTrace();
-			return null;
+			throw new PaisApiException("La API de paises devolvio una respuesta inesperada.");
 		}
 		return lista;
 	}
@@ -133,15 +134,27 @@ public class ExternalHTTPRequestHandler {
 		return pais;
 	}
 
-	public static List<PokemonDTO> consultarListaPokemones(String url) {
+	private static String obtenerJsonPokemon(String url) throws PokemonApiException, PokemonNotFoundException {
 		HttpResponse<String> response = ejecutarGetPokemon(url);
-		if (response == null || response.statusCode() != 200) {
-			return null;
+		if (response == null) {
+			throw new PokemonApiException();
 		}
+		if (response.statusCode() == 404) {
+			throw new PokemonNotFoundException();
+		}
+		if (response.statusCode() != 200) {
+			throw new PokemonApiException();
+		}
+		return response.body();
+	}
+
+	public static List<PokemonDTO> consultarListaPokemones(String url)
+			throws PokemonApiException, PokemonNotFoundException {
+		String body = obtenerJsonPokemon(url);
 
 		List<PokemonDTO> lista = new ArrayList<>();
 		try {
-			JsonObject root = JsonParser.parseString(response.body()).getAsJsonObject();
+			JsonObject root = JsonParser.parseString(body).getAsJsonObject();
 			if (root.has("results") && root.get("results").isJsonArray()) {
 				for (JsonElement el : root.getAsJsonArray("results")) {
 					if (el.isJsonObject()) {
@@ -155,18 +168,16 @@ public class ExternalHTTPRequestHandler {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
+			throw new PokemonApiException("La API de pokemones devolvio una respuesta inesperada.");
 		}
 		return lista;
 	}
 
-	public static PokemonDTO consultarPokemonUnico(String url) {
-		HttpResponse<String> response = ejecutarGetPokemon(url);
-		if (response == null || response.statusCode() != 200) {
-			return null;
-		}
+	public static PokemonDTO consultarPokemonUnico(String url) throws PokemonApiException, PokemonNotFoundException {
+		String body = obtenerJsonPokemon(url);
 
 		try {
-			JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+			JsonObject json = JsonParser.parseString(body).getAsJsonObject();
 			PokemonDTO pokemon = new PokemonDTO();
 			pokemon.setName(getString(json, "name"));
 			pokemon.setHeight(getInt(json, "height"));
@@ -187,18 +198,16 @@ public class ExternalHTTPRequestHandler {
 			return pokemon;
 		} catch (Exception e) {
 			e.printStackTrace();
-			return null;
+			throw new PokemonApiException("La API de pokemones devolvio una respuesta inesperada.");
 		}
 	}
 
-	public static PokemonEspecieDTO consultarEspeciePokemon(String url) {
-		HttpResponse<String> response = ejecutarGetPokemon(url);
-		if (response == null || response.statusCode() != 200) {
-			return null;
-		}
+	public static PokemonEspecieDTO consultarEspeciePokemon(String url)
+			throws PokemonApiException, PokemonNotFoundException {
+		String body = obtenerJsonPokemon(url);
 
 		try {
-			JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+			JsonObject json = JsonParser.parseString(body).getAsJsonObject();
 			PokemonEspecieDTO especie = new PokemonEspecieDTO();
 			especie.setName(getString(json, "name"));
 
@@ -234,18 +243,16 @@ public class ExternalHTTPRequestHandler {
 			return especie;
 		} catch (Exception e) {
 			e.printStackTrace();
-			return null;
+			throw new PokemonApiException("La API de pokemones devolvio una respuesta inesperada.");
 		}
 	}
 
-	public static PokemonEvolucionDTO consultarEvolucionPokemon(String url) {
-		HttpResponse<String> response = ejecutarGetPokemon(url);
-		if (response == null || response.statusCode() != 200) {
-			return null;
-		}
+	public static PokemonEvolucionDTO consultarEvolucionPokemon(String url)
+			throws PokemonApiException, PokemonNotFoundException {
+		String body = obtenerJsonPokemon(url);
 
 		try {
-			JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+			JsonObject json = JsonParser.parseString(body).getAsJsonObject();
 			PokemonEvolucionDTO evolucion = new PokemonEvolucionDTO();
 
 			if (json.has("chain") && json.get("chain").isJsonObject()) {
@@ -255,7 +262,7 @@ public class ExternalHTTPRequestHandler {
 			return evolucion;
 		} catch (Exception e) {
 			e.printStackTrace();
-			return null;
+			throw new PokemonApiException("La API de pokemones devolvio una respuesta inesperada.");
 		}
 	}
 
@@ -302,7 +309,69 @@ public class ExternalHTTPRequestHandler {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	public static List<ImagenDTO> consultarImagenes(String url, int cantidad) throws ImagenApiException {
+		HttpResponse<String> response = ejecutarGetImagen(url);
+		if (response == null || response.statusCode() != 200) {
+			throw new ImagenApiException();
+		}
+
+		PixabayRespuestaDTO respuesta = null;
+		try {
+			respuesta = new Gson().fromJson(response.body(), PixabayRespuestaDTO.class);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		if (respuesta == null || respuesta.getHits() == null) {
+			throw new ImagenApiException("La API de imagenes devolvio una respuesta inesperada.");
+		}
+
+		List<ImagenDTO> lista = new ArrayList<>();
+		for (PixabayHitDTO hit : respuesta.getHits()) {
+			if (lista.size() >= cantidad) {
+				break;
+			}
+			ImagenDTO dto = new ImagenDTO();
+			dto.setId(hit.getId());
+			dto.setDescripcion(hit.getTags());
+			dto.setUrlImagen(hit.getWebformatURL());
+			dto.setUrlPagina(hit.getPageURL());
+			lista.add(dto);
+		}
+		return lista;
+	}
+
+	public static byte[] descargarImagen(String url) throws ImagenApiException {
+		HttpRequest request = HttpRequest.newBuilder().GET().uri(URI.create(url)).header("User-Agent", "Mozilla/5.0")
+				.timeout(Duration.ofSeconds(20)).build();
+
+		try {
+			HttpResponse<byte[]> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofByteArray());
+			if (response.statusCode() == 200) {
+				return response.body();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		throw new ImagenApiException("No se pudo descargar la imagen.");
+	}
+
+	private static HttpResponse<String> ejecutarGetImagen(String url) {
+		HttpRequest request = HttpRequest.newBuilder().GET().uri(URI.create(url)).header("Accept", "application/json")
+				.timeout(Duration.ofSeconds(15)).build();
+
+		try {
+			return HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -343,67 +412,5 @@ public class ExternalHTTPRequestHandler {
 			}
 		}
 		return lista;
-	}
-	
-	public static List<ImagenDTO> consultarImagenes(String url, int cantidad) {
-		HttpResponse<String> response = ejecutarGetImagen(url);
-		if (response == null || response.statusCode() != 200) {
-			return null;
-		}
-
-		try {
-			PixabayRespuestaDTO respuesta = new Gson().fromJson(response.body(), PixabayRespuestaDTO.class);
-			if (respuesta == null || respuesta.getHits() == null) {
-				return null;
-			}
-
-			List<ImagenDTO> lista = new ArrayList<>();
-			for (PixabayHitDTO hit : respuesta.getHits()) {
-				if (lista.size() >= cantidad) {
-					break;
-				}
-				ImagenDTO dto = new ImagenDTO();
-				dto.setId(hit.getId());
-				dto.setDescripcion(hit.getTags());
-				dto.setUrlImagen(hit.getWebformatURL());
-				dto.setUrlPagina(hit.getPageURL());
-				lista.add(dto);
-			}
-			return lista;
-		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
-		}
-	}
-
-	public static byte[] descargarImagen(String url) {
-		HttpRequest request = HttpRequest.newBuilder().GET().uri(URI.create(url)).header("User-Agent", "Mozilla/5.0")
-				.timeout(Duration.ofSeconds(20)).build();
-
-		try {
-			HttpResponse<byte[]> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofByteArray());
-			if (response.statusCode() == 200) {
-				return response.body();
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	private static HttpResponse<String> ejecutarGetImagen(String url) {
-		HttpRequest request = HttpRequest.newBuilder().GET().uri(URI.create(url)).header("Accept", "application/json")
-				.timeout(Duration.ofSeconds(15)).build();
-
-		try {
-			return HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		return null;
 	}
 }

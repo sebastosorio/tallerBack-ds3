@@ -49,7 +49,4 @@ public class PokemonChainLinkDTO {
 		return "PokemonChainLinkDTO [is_baby=" + is_baby + ", species=" + species + ", evolves_to=" + evolves_to + "]";
 	}
 	
-	
-	
-	
 }
