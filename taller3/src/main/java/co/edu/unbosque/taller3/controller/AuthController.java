@@ -53,7 +53,7 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Username already exists");
         }
 
-        // Create new user
+       
         int result = userService.create(registerRequest);
         if (result == 0) {
             return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully");
